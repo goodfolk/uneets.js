@@ -9,7 +9,7 @@ interface ISelectUneetsOptions {
   uneetSelector?: string
 }
 
-const selectUneets = (opt: ISelectUneetsOptions): Array<HTMLElement | null> => {
+const selectUneets = (opt: ISelectUneetsOptions): Array<HTMLElement> => {
   const defaults = {
     // root element for looking up for uneets
     parentSelector: 'body',
@@ -22,9 +22,8 @@ const selectUneets = (opt: ISelectUneetsOptions): Array<HTMLElement | null> => {
   }
 
   const { namespaces, uneetSelector, parentSelector } = options
-  let collection = null
-  let parentEl: HTMLElement
-  const cssSelectors = []
+  let parentEl
+  const cssSelectors: Array<string> = []
 
   if (namespaces && Array.isArray(namespaces)) {
     namespaces.forEach(ns => {
@@ -40,13 +39,13 @@ const selectUneets = (opt: ISelectUneetsOptions): Array<HTMLElement | null> => {
     parentEl = document.body
   }
 
-  collection = Array.from(parentEl.querySelectorAll(cssSelectors.join(',')))
-
-  return collection
+  return Array.from(parentEl.querySelectorAll(cssSelectors.join(',')))
 }
 
 interface IFilterDataset {
-  ds: Object
+  ds: {
+    [key: string]: any
+  }
   allowedNamespaces: Array<string>
   namespace?: string
   uneetSelector?: string
@@ -65,13 +64,15 @@ const filterDataset = (opt: IFilterDataset) => {
   const { ds, namespace: ns, uneetSelector, allowedNamespaces } = options
 
   let name = ''
-  let namespace
-  let parsedDataSet = {}
+  let namespace: string
+  let parsedDataSet: {
+    [key: string]: any
+  } = {}
   let uneetOptions = {
     autoInitialize: true, // by default the Uneet will be automatically initialized
   }
 
-  Object.keys(ds).forEach(k => {
+  Object.keys(ds).forEach((k: string) => {
     let prop = ''
     let propLower = ''
 
@@ -115,14 +116,16 @@ const filterDataset = (opt: IFilterDataset) => {
       // Uneets can be defined using a plain `string` or with `object` notation
       // which allows the uneet to define lazy init plus other properties.
       try {
-        const optionsObj = JSON.parse(ds[k])
+        const optionsObj: { name: string; autoInitialize: string } | string = JSON.parse(ds[k])
 
-        if (isObject(optionsObj)) {
+        if (typeof optionsObj === 'string') {
+          name = optionsObj
+        } else if (isObject(optionsObj)) {
           if (optionsObj.name === undefined) {
             throw new Error('[parser] Property name is required when using object notation')
           }
 
-          const { name, ...rest } = optionsObj.name
+          name = optionsObj.name
 
           // to ensure that `.autoInitialize` is Boolean.
           if (Object.prototype.hasOwnProperty.call(optionsObj, 'autoInitialize')) {
@@ -130,9 +133,6 @@ const filterDataset = (opt: IFilterDataset) => {
           }
 
           Object.assign(uneetOptions, optionsObj)
-        } else {
-          // if it's not an object any other type won't be acceptable.
-          name = undefined
         }
       } catch (e) {
         // if we enter here it means it should be a string.
@@ -153,7 +153,7 @@ type UneetsRelationshipTracking = Array<{
   child: {
     el: HTMLElement
     name: string
-    options: {}
+    props: {}
   }
 }>
 
@@ -190,7 +190,7 @@ const parseOptions = (
       child: {
         el,
         name,
-        options: uneetOptions,
+        props,
       },
     })
   }
@@ -212,6 +212,7 @@ const updateParentChildProps = (
     if (elToPropsMapper.has(parent)) {
       const parentProps = elToPropsMapper.get(parent)
 
+      // TODO: a parent can have multiple children
       elToPropsMapper.set(parent, {
         ...parentProps,
         __children: el,
@@ -230,12 +231,25 @@ const updateParentChildProps = (
   })
 }
 
-interface IParserOptions {
+export interface IParserOptions {
   namespaces?: Array<string>
   parentSelector?: string
   uneetSelector?: string
 }
-const parser = (opt: IParserOptions = {}) => {
+
+const parser = (
+  opt: IParserOptions = {}
+): Map<
+  HTMLElement,
+  {
+    name: string
+    props: {}
+    uneetOptions: {
+      autoInitialize: boolean
+    }
+    el: HTMLElement
+  }
+> => {
   const defaults = {
     namespaces: ['gf'],
     parentSelector: 'body',

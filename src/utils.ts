@@ -1,8 +1,10 @@
-export const toCamelCase = (s, dashChar = /-([a-z])/gi) =>
+export const toCamelCase = (s: string, dashChar = /-([a-z])/gi) =>
   s.replace(dashChar, (m, l) => l.toUpperCase())
 
 export const getDataset = (el: HTMLElement) => {
-  let dataset = {}
+  let dataset: {
+    [name: string]: string | void
+  } = {}
 
   if (el && el.dataset !== undefined) {
     dataset = {
@@ -16,7 +18,7 @@ export const getDataset = (el: HTMLElement) => {
     const forEach = [].forEach
     dataset = {}
     if (el && el.hasAttributes()) {
-      forEach.call(el.attributes, attr => {
+      forEach.call(el.attributes, (attr: { name: string; value: string }) => {
         match = attr.name.match(regex)
         if (match) {
           dataset[toCamelCase(match[1], dashChar)] = attr.value
@@ -32,10 +34,12 @@ export const getUneetNamespace = (key: string) => {
   const re = /[^A-Z]+/
   const m = re.exec(key)
 
-  return m[0].toLowerCase()
+  if (m === null) return ''
+
+  return m[0] && m[0].toLowerCase()
 }
 
-export const isObject = value => {
+export const isObject = (value: any) => {
   const type = typeof value
   return value != null && (type === 'object' || type === 'function')
 }
@@ -57,7 +61,7 @@ export const closest = (
   }
 }
 
-interface IGetParentUneetOptions {
+export interface IGetParentUneetOptions {
   namespaces: Array<string>
   uneetSelector: string
 }
