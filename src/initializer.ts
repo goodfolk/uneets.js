@@ -6,6 +6,8 @@ export interface IMapElToPropsOptions {
   }
   el: HTMLElement
   __parent?: HTMLElement
+  __parentProps?: {}
+  __children?: Map<HTMLElement, {}>
 }
 
 export type TMapElToProps = Map<HTMLElement, IMapElToPropsOptions>
@@ -18,6 +20,7 @@ export interface IInitializerOptions {
       init: (o: {}, s: {}) => void
     }
   >
+  force?: boolean
 }
 
 // if one of its parent's has `autoInitialize: false` child components
@@ -25,8 +28,11 @@ export interface IInitializerOptions {
 const shouldInitialize = (
   el: HTMLElement,
   elProps: IMapElToPropsOptions,
-  mapElToProps: TMapElToProps
+  mapElToProps: TMapElToProps,
+  force: boolean = false
 ): boolean => {
+  if (force === true) return true
+
   const { uneetOptions: { autoInitialize }, __parent } = elProps
 
   if (!autoInitialize) return false
@@ -38,23 +44,38 @@ const shouldInitialize = (
       return false
     }
 
-    return shouldInitialize(__parent, newProps, mapElToProps)
+    return shouldInitialize(__parent, newProps, mapElToProps, force)
   }
 
   return true
 }
 
 const initializer = (options: IInitializerOptions) => {
-  const { uneets, factories } = options
+  const { uneets, factories, force } = options
 
   uneets.forEach((uneet, el) => {
-    if (shouldInitialize(el, uneet, uneets)) {
-      const { name, props } = uneet
+    if (shouldInitialize(el, uneet, uneets, force)) {
+      const { name, props, __parent, __parentProps, __children } = uneet
 
       const factory = factories.get(name)
 
       if (factory) {
-        factory.init(props, {})
+        factory.init(
+          {
+            el,
+            props,
+            parent: __parent
+              ? {
+                  el: __parent,
+                  props: __parentProps,
+                }
+              : undefined,
+            children: __children || undefined,
+          },
+          {} // TODO: replace {} with shared
+        )
+      } else {
+        // TODO: log a warning once the internal logger is implemented.
       }
     }
   })

@@ -44,7 +44,11 @@ export const isObject = (value: any) => {
   return value != null && (type === 'object' || type === 'function')
 }
 
-export const matches = Element.prototype.matches || Element.prototype.msMatchesSelector
+export const matches = (el: HTMLElement | Node, selector: string) => {
+  const m = Element.prototype.matches || Element.prototype.msMatchesSelector
+
+  return m.call(el, selector)
+}
 
 export const closest = (
   el: HTMLElement,
@@ -55,7 +59,7 @@ export const closest = (
   let parent = checkSelf ? el : el.parentNode
 
   while (parent && parent !== limitParent) {
-    if (matches.call(parent, selector)) return parent
+    if (matches(parent, selector)) return parent
 
     parent = parent.parentNode
   }

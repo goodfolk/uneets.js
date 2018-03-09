@@ -1,18 +1,19 @@
-import { getDataset, getUneetNamespace, isObject, getParentUneet } from './utils'
+import { getDataset, getUneetNamespace, isObject, getParentUneet, matches } from './utils'
 
 // used for selecting uneets within the DOM: data-<ns>-<uneetSelector> (i.e [data-gf-uneet])
 const UNEET_SELECTOR = 'uneet'
 
 interface ISelectUneetsOptions {
   namespaces: Array<string>
-  parentSelector?: string
+  parentSelector?: string | HTMLElement | Array<HTMLElement>
   uneetSelector?: string
+  includeParentSelector?: boolean
 }
 
 const selectUneets = (opt: ISelectUneetsOptions): Array<HTMLElement> => {
   const defaults = {
     // root element for looking up for uneets
-    parentSelector: 'body',
+    parentSelector: document.body,
     uneetSelector: UNEET_SELECTOR,
   }
 
@@ -33,13 +34,50 @@ const selectUneets = (opt: ISelectUneetsOptions): Array<HTMLElement> => {
 
   if (typeof parentSelector === 'string') {
     parentEl = document.querySelector(parentSelector)
+  } else {
+    parentEl = parentSelector
   }
 
   if (parentEl === null || parentEl === undefined) {
     parentEl = document.body
   }
 
-  return Array.from(parentEl.querySelectorAll(cssSelectors.join(',')))
+  const selector = cssSelectors.join(',')
+
+  let childUneets: Array<HTMLElement> = []
+  // if it is an array it means we are sending an array of elements
+  // instead of a plain selector or DOM element so
+  // we'll have to query each element separately to
+  // grab all their children
+  if (Array.isArray(parentEl)) {
+    childUneets = parentEl.reduce((reducer, el) => {
+      const elChilds = Array.from(el.querySelectorAll(selector))
+
+      return [...reducer, ...elChilds]
+    }, childUneets)
+  } else {
+    childUneets = Array.from(parentEl.querySelectorAll(selector))
+  }
+
+  // const childUneets: Array<HTMLElement> = Array.from(parentEl.querySelectorAll(selector));
+
+  if (options.includeParentSelector === true) {
+    let matchedParents: Array<HTMLElement> = []
+
+    if (Array.isArray(parentEl)) {
+      parentEl.forEach(el => {
+        if (matches(el, selector)) {
+          matchedParents.push(el)
+        }
+      })
+    } else if (matches(parentEl, selector)) {
+      matchedParents.push(parentEl)
+    }
+
+    return [...matchedParents, ...childUneets]
+  }
+
+  return childUneets
 }
 
 interface IFilterDataset {
@@ -200,7 +238,14 @@ const parseOptions = (
 
 const updateParentChildProps = (
   relationships: UneetsRelationshipTracking,
-  elToPropsMapper: Map<HTMLElement | Node, {}>
+  elToPropsMapper: Map<
+    HTMLElement | Node,
+    {
+      __children?: Map<HTMLElement, {}>
+      __parent?: HTMLElement | Node
+      __parentProps?: {}
+    }
+  >
 ) => {
   if (relationships.length === 0) {
     return
@@ -212,11 +257,31 @@ const updateParentChildProps = (
     if (elToPropsMapper.has(parent)) {
       const parentProps = elToPropsMapper.get(parent)
 
-      // TODO: a parent can have multiple children
-      elToPropsMapper.set(parent, {
-        ...parentProps,
-        __children: el,
-      })
+      // Gets the props from the parent so we can extend them
+      const elParentProps = elToPropsMapper.get(parent)
+      // Gets props from the child so we can keep track of them
+      const elProps = elToPropsMapper.get(el)
+      const childProps = elProps || {}
+
+      // if the parent doesn't have props associated yet or
+      // it is the first time we are trying to relate it to
+      // to a child
+      if (elParentProps) {
+        if (elParentProps.__children) {
+          const extendedChildren = elParentProps.__children.set(el, childProps)
+
+          // __children will basically store a map of children and their props
+          elToPropsMapper.set(parent, {
+            ...parentProps,
+            __children: extendedChildren,
+          })
+        } else {
+          elToPropsMapper.set(parent, {
+            ...parentProps,
+            __children: new Map([[el, childProps]]),
+          })
+        }
+      }
 
       if (elToPropsMapper.has(el)) {
         const childProps = elToPropsMapper.get(el)
@@ -233,8 +298,10 @@ const updateParentChildProps = (
 
 export interface IParserOptions {
   namespaces?: Array<string>
-  parentSelector?: string
+  parentSelector?: string | HTMLElement | Array<HTMLElement>
   uneetSelector?: string
+  includeParentSelector?: boolean // when looking for Uneets, if true, it start looking
+  // from the `parentElement` instead of its children
 }
 
 const parser = (
@@ -254,6 +321,7 @@ const parser = (
     namespaces: ['gf'],
     parentSelector: 'body',
     uneetSelector: 'uneet',
+    includeParentSelector: true,
   }
   const options = {
     ...defaults,
@@ -277,7 +345,5 @@ const parser = (
 
   return mapElToProps
 }
-
-parser()
 
 export default parser

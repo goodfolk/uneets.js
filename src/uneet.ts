@@ -1,39 +1,70 @@
-import parser, { IParserOptions } from './parser'
+import p, { IParserOptions } from './parser'
 import initializer from './initializer'
 
-export default function Uneet(config: IParserOptions = {}) {
-  return {
-    start: () => {
-      const parsedUneets = parser(config)
+export interface IInitializeOptions extends IParserOptions {
+  factories: Map<
+    string,
+    {
+      init: (o: {}, s: {}) => void
+    }
+  >
+  force?: boolean
+  includeParentSelector?: boolean
+}
 
-      initializer({
-        uneets: parsedUneets,
-        factories: new Map([
-          [
-            'Something',
-            {
-              init: (o: {}, s: {}) => {
-                console.log('========> 1', o, s)
-              },
-            },
-          ],
-          [
-            'Something2',
-            {
-              init: (o: {}, s: {}) => {
-                console.log('========> 2', o, s)
-              },
-            },
-          ],
-          [
-            'Somethin3',
-            {
-              init: (o: {}, s: {}) => {
-                console.log('========> 3', o, s)
-              },
-            },
-          ],
-        ]),
+export interface IUneetsExtendedOptions extends IParserOptions {
+  factories?: Map<
+    string,
+    {
+      init: (o: {}, s: {}) => void
+    }
+  >
+  force?: boolean
+  includeParentSelector?: boolean
+}
+
+const parse = (options: IInitializeOptions = { factories: new Map() }, parser = p) =>
+  parser(options)
+
+const start = (options: IInitializeOptions = { factories: new Map() }, parser = p) => {
+  const { factories, force } = options
+  const mapElToProps = parse(options)
+
+  initializer({
+    uneets: mapElToProps,
+    factories,
+    force,
+  })
+
+  return {
+    mapElToProps,
+  }
+}
+
+export interface IUneetsOptions {
+  namespaces?: Array<string>
+  parentSelector?: string
+  uneetSelector?: string
+  factories: Map<
+    string,
+    {
+      init: (o: {}, s: {}) => void
+    }
+  >
+}
+
+export default function Uneet(options: IUneetsOptions = { factories: new Map() }) {
+  return {
+    parse: (configExtend: IUneetsExtendedOptions = {}) => {
+      return parse({
+        ...options,
+        ...configExtend,
+      })
+    },
+    start: (configExtend: IUneetsExtendedOptions = {}) => {
+      return start({
+        ...options,
+        ...configExtend,
       })
     },
   }
