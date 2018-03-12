@@ -1,26 +1,28 @@
+import { ISharedOptions, IUneetOptions } from './types';
 export interface IMapElToPropsOptions {
-  name: string
-  props: {}
+  name: string;
+  props: {};
   uneetOptions: {
-    autoInitialize: boolean
-  }
-  el: HTMLElement
-  __parent?: HTMLElement
-  __parentProps?: {}
-  __children?: Map<HTMLElement, {}>
+    autoInitialize: boolean;
+  };
+  el: HTMLElement;
+  __parent?: HTMLElement;
+  __parentProps?: {};
+  __children?: Map<HTMLElement, {}>;
 }
 
-export type TMapElToProps = Map<HTMLElement, IMapElToPropsOptions>
+export type TMapElToProps = Map<HTMLElement, IMapElToPropsOptions>;
 
 export interface IInitializerOptions {
-  uneets: TMapElToProps
+  uneets: TMapElToProps;
   factories: Map<
     string,
     {
-      init: (o: {}, s: {}) => void
+      init: (o: IUneetOptions, s: ISharedOptions) => void;
     }
-  >
-  force?: boolean
+  >;
+  force?: boolean;
+  shared: ISharedOptions;
 }
 
 // if one of its parent's has `autoInitialize: false` child components
@@ -31,33 +33,33 @@ const shouldInitialize = (
   mapElToProps: TMapElToProps,
   force: boolean = false
 ): boolean => {
-  if (force === true) return true
+  if (force === true) return true;
 
-  const { uneetOptions: { autoInitialize }, __parent } = elProps
+  const { uneetOptions: { autoInitialize }, __parent } = elProps;
 
-  if (!autoInitialize) return false
+  if (!autoInitialize) return false;
 
   if (__parent !== undefined) {
-    const newProps = mapElToProps.get(__parent)
+    const newProps = mapElToProps.get(__parent);
 
     if (newProps === undefined) {
-      return false
+      return false;
     }
 
-    return shouldInitialize(__parent, newProps, mapElToProps, force)
+    return shouldInitialize(__parent, newProps, mapElToProps, force);
   }
 
-  return true
-}
+  return true;
+};
 
 const initializer = (options: IInitializerOptions) => {
-  const { uneets, factories, force } = options
+  const { uneets, factories, force, shared } = options;
 
   uneets.forEach((uneet, el) => {
     if (shouldInitialize(el, uneet, uneets, force)) {
-      const { name, props, __parent, __parentProps, __children } = uneet
+      const { name, props, __parent, __parentProps, __children } = uneet;
 
-      const factory = factories.get(name)
+      const factory = factories.get(name);
 
       if (factory) {
         factory.init(
@@ -72,13 +74,13 @@ const initializer = (options: IInitializerOptions) => {
               : undefined,
             children: __children || undefined,
           },
-          {} // TODO: replace {} with shared
-        )
+          shared
+        );
       } else {
         // TODO: log a warning once the internal logger is implemented.
       }
     }
-  })
-}
+  });
+};
 
-export default initializer
+export default initializer;

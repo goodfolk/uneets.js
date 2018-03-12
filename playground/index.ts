@@ -1,19 +1,26 @@
 import uneet from '../src/uneet';
+import { ISharedOptions } from '../src/types';
 
 const factories = new Map([
   // this is an example: this map should be passed by the consumer.
   [
     'Something',
     {
-      init: (o: {}, s: {}) => {
-        console.log('========> 1', o, s);
+      init: (o: {}, s: ISharedOptions) => {
+        const { log, somethingShared } = s;
+
+        log.info('========> 1');
+
+        if (typeof somethingShared === 'function') {
+          somethingShared();
+        }
       },
     },
   ],
   [
     'Something2',
     {
-      init: (o: {}, s: {}) => {
+      init: (o: {}, s: ISharedOptions) => {
         console.log('========> 2', o, s);
       },
     },
@@ -79,20 +86,44 @@ const u = uneet({
 // 4. Parse all Uneets within the page and then manually
 //    initialize selected Uneets
 // --------------------------------------------------
-const globalMapElToProps = u.parse();
-const filteredElems = [];
-globalMapElToProps.forEach((options, el) => {
-  const { name } = options;
+// const globalMapElToProps = u.parse();
+// const filteredElems = [];
+// globalMapElToProps.forEach((options, el) => {
+//   const { name } = options;
 
-  // Only instantiate components with this name. A bit of a silly
-  // example since you this can be accomplish by using a selector
-  // like the examples above but this shows a way of applying any
-  // kind of filtering logic to decide which ones to actually instantiate.
-  if (name === 'Something2') {
-    filteredElems.push(el);
-  }
+//   // Only instantiate components with this name. A bit of a silly
+//   // example since you this can be accomplish by using a selector
+//   // like the examples above but this shows a way of applying any
+//   // kind of filtering logic to decide which ones to actually instantiate.
+//   if (name === 'Something2') {
+//     filteredElems.push(el);
+//   }
+// });
+
+// u.start({
+//   parentSelector: filteredElems,
+// });
+
+// 5. `start` return an object containing (for now) to main keys:
+//  - mapElToProps: it's a `Map` containing all the parsed dom elements
+//    along with their respective props
+//  - `shared`: Object containing all the utilities shared across Uneets.
+//    Example: logger.
+// --------------------------------------------------
+// const data = u.start();
+// console.log('u.start return data', data);
+
+// 6. `start` also let us to send a custom `shared` object that can include
+//    any kind of functionality that we want to share across our Uneets. An
+//    example of this could be a EventEmitter where we usually want to share
+//    the same instance across components.
+// --------------------------------------------------
+const data = u.start({
+  shared: {
+    somethingShared: () => {
+      console.log('Im shared!');
+    },
+  },
 });
 
-u.start({
-  parentSelector: filteredElems,
-});
+console.log('u.start return data', data);
