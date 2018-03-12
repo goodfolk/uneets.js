@@ -54,6 +54,7 @@ const shouldInitialize = (
 
 const initializer = (options: IInitializerOptions) => {
   const { uneets, factories, force, shared } = options;
+  const { log } = shared;
 
   uneets.forEach((uneet, el) => {
     if (shouldInitialize(el, uneet, uneets, force)) {
@@ -76,8 +77,10 @@ const initializer = (options: IInitializerOptions) => {
           },
           shared
         );
-      } else {
-        // TODO: log a warning once the internal logger is implemented.
+      } else if (log && typeof log.warn === 'function') {
+        log.warn(
+          `[uneets] There is no factory registered for Uneet: ${name}. Please review uneet({ factories: ... })`
+        );
       }
     }
   });

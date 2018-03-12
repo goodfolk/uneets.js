@@ -66,7 +66,7 @@ const start = (options: IInitializeOptions = { factories: new Map() }, parser = 
 
 export interface IUneetsOptions {
   namespaces?: Array<string>;
-  parentSelector?: string;
+  parentSelector?: string | HTMLElement | Array<HTMLElement>;
   uneetSelector?: string;
   factories: Map<
     string,
