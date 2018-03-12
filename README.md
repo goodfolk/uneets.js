@@ -189,3 +189,11 @@ const data = u.start({
 
 console.log('u.start return data', data);
 ```
+
+## Playground
+
+To play with the library you could run:
+
+`yarn run playground`.
+
+By default is gonna spin up a server at: `http://localhost:1234`
