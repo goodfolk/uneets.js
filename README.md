@@ -194,6 +194,12 @@ console.log('u.start return data', data);
 
 To play with the library you could run:
 
+Install all the dependencies.
+
+`yarn`
+
+then
+
 `yarn run playground`.
 
 By default is gonna spin up a server at: `http://localhost:1234`
